@@ -1,5 +1,5 @@
 """
-Django app for easy embeding YouTube and Vimeo videos and music from
+Django app for easy embedding YouTube and Vimeo videos and music from
 SoundCloud.
 """
 

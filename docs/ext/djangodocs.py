@@ -8,12 +8,12 @@ import re
 from sphinx import addnodes, __version__ as sphinx_ver
 from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.writers.html import HTMLTranslator
-from sphinx.util.console import bold
 from docutils.parsers.rst import Directive
 
 # RE for option descriptions without a '--' prefix
 simple_option_desc_re = re.compile(
     r'([-_a-zA-Z0-9]+)(\s*.*?)(?=,\s+(?:/|-|--)|$)')
+
 
 def setup(app):
     app.add_crossref_type(
@@ -203,7 +203,7 @@ class DjangoStandaloneHTMLBuilder(StandaloneHTMLBuilder):
 
     def finish(self):
         super(DjangoStandaloneHTMLBuilder, self).finish()
-        self.info(bold("writing templatebuiltins.js..."))
+        self.info("writing templatebuiltins.js...")
         xrefs = self.env.domaindata["std"]["objects"]
         templatebuiltins = {
             "ttags": [n for ((t, n), (l, a)) in xrefs.items()
