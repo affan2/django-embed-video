@@ -46,6 +46,12 @@ def detect_backend(url):
 
     Goes over backends in ``settings.EMBED_VIDEO_BACKENDS``,
     calls :py:func:`~VideoBackend.is_valid` and returns backend instance.
+
+    :param url: URL which is passed to `is_valid` methods of VideoBackends.
+    :type url: str
+
+    :return: Returns recognized VideoBackend
+    :rtype: VideoBackend
     """
 
     for backend_name in EMBED_VIDEO_BACKENDS:
@@ -102,6 +108,8 @@ class VideoBackend(object):
     Pattern in which the code is inserted.
 
     Example: ``http://myvideo.com?code=%s``
+
+    :type: str
     """
 
     pattern_thumbnail_url = None
@@ -109,11 +117,15 @@ class VideoBackend(object):
     Pattern in which the code is inserted to get thumbnail url.
 
     Example: ``http://static.myvideo.com/thumbs/%s``
+
+    :type: str
     """
 
     allow_https = True
     """
     Sets if HTTPS version allowed for specific backend.
+
+    :type: bool
     """
 
     template_name = 'embed_video/embed_code.html'
@@ -122,22 +134,30 @@ class VideoBackend(object):
 
     Passed template variables: ``{{ backend }}`` (instance of VideoBackend),
     ``{{ width }}``, ``{{ height }}``
+
+    :type: str
     """
 
     default_query = ''
     """
     Default query string or `QueryDict` appended to url
+
+    :type: str
     """
 
     is_secure = False
     """
     Decides if secured protocol (HTTPS) is used.
+
+    :type: bool
     """
 
     def __init__(self, url):
         """
         First it tries to load data from cache and if it don't succeed, run
         :py:meth:`init` and then save it to cache.
+
+        :type url: str
         """
         self.backend = self.__class__.__name__
         self._url = url
@@ -187,6 +207,9 @@ class VideoBackend(object):
 
     @query.setter
     def query(self, value):
+        """
+        :type value: QueryDict | str
+        """
         self._query = value \
             if isinstance(value, QueryDict) \
             else QueryDict(value, mutable=True)
@@ -196,12 +219,16 @@ class VideoBackend(object):
         """
         Class method to control if passed url is valid for current backend. By
         default it is done by :py:data:`re_detect` regex.
+
+        :type url: str
         """
         return True if cls.re_detect.match(url) else False
 
     def get_code(self):
         """
         Returns video code matched from given url by :py:data:`re_code`.
+
+        :rtype: str
         """
         match = self.re_code.search(self._url)
         if match:
@@ -219,6 +246,8 @@ class VideoBackend(object):
         """
         Returns thumbnail URL folded from :py:data:`pattern_thumbnail_url` and
         parsed code.
+
+        :rtype: str
         """
         return self.pattern_thumbnail_url.format(code=self.code,
                                                  protocol=self.protocol)
@@ -226,6 +255,10 @@ class VideoBackend(object):
     def get_embed_code(self, width, height):
         """
         Returns embed code rendered from template :py:data:`template_name`.
+
+        :type width: int | str
+        :type height: int | str
+        :rtype: str
         """
         return render_to_string(self.template_name, {
             'backend': self,
@@ -234,9 +267,15 @@ class VideoBackend(object):
         })
 
     def get_info(self):
+        """
+        :rtype: dict
+        """
         raise NotImplementedError
 
     def set_options(self, options):
+        """
+        :type options: dict
+        """
         for key in options:
             setattr(self, key, options[key])
 
@@ -264,8 +303,22 @@ class YoutubeBackend(VideoBackend):
     )
 
     pattern_url = '{protocol}://www.youtube.com/embed/{code}'
-    pattern_thumbnail_url = '{protocol}://img.youtube.com/vi/{code}/hqdefault.jpg'
+    pattern_thumbnail_url = '{protocol}://img.youtube.com/vi/{code}/{resolution}'
     default_query = EMBED_VIDEO_YOUTUBE_DEFAULT_QUERY
+    resolutions = [
+        'maxresdefault.jpg',
+        'sddefault.jpg',
+        'hqdefault.jpg',
+        'mqdefault.jpg',
+    ]
+
+    is_secure = True
+    """
+    Decides if secured protocol (HTTPS) is used.
+
+    :type: bool
+    """
+
 
     def get_code(self):
         code = super(YoutubeBackend, self).get_code()
@@ -283,6 +336,20 @@ class YoutubeBackend(VideoBackend):
 
         return code
 
+    def get_thumbnail_url(self):
+        """
+        Returns thumbnail URL folded from :py:data:`pattern_thumbnail_url` and
+        parsed code.
+
+        :rtype: str
+        """
+        for resolution in self.resolutions:
+            temp_thumbnail_url = self.pattern_thumbnail_url.format(
+                code=self.code, protocol=self.protocol, resolution=resolution)
+            if int(requests.head(temp_thumbnail_url).status_code) < 400:
+                return temp_thumbnail_url
+        return None
+
 
 class VimeoBackend(VideoBackend):
     """
@@ -295,10 +362,19 @@ class VimeoBackend(VideoBackend):
     pattern_url = '{protocol}://player.vimeo.com/video/{code}'
     pattern_info = '{protocol}://vimeo.com/api/v2/video/{code}.json'
 
+    is_secure = True
+    """
+    Decides if secured protocol (HTTPS) is used.
+
+    :type: bool
+    """
+
+
     def get_info(self):
         try:
             response = requests.get(
-                self.pattern_info.format(code=self.code, protocol=self.protocol),
+                self.pattern_info.format(code=self.code,
+                                         protocol=self.protocol),
                 timeout=EMBED_VIDEO_TIMEOUT
             )
             return json.loads(response.text)[0]
@@ -313,18 +389,31 @@ class SoundCloudBackend(VideoBackend):
     """
     Backend for SoundCloud URLs.
     """
-    base_url = 'http://soundcloud.com/oembed'
+    base_url = '{protocol}://soundcloud.com/oembed'
 
     re_detect = re.compile(r'^(http(s)?://(www\.)?)?soundcloud\.com/.*', re.I)
     re_code = re.compile(r'src=".*%2F(?P<code>\d+)&show_artwork.*"', re.I)
     re_url = re.compile(r'src="(?P<url>.*?)"', re.I)
 
+    is_secure = True
+    """
+    Decides if secured protocol (HTTPS) is used.
+
+    :type: bool
+    """
+
     @cached_property
     def width(self):
+        """
+        :rtype: str
+        """
         return self.info.get('width')
 
     @cached_property
     def height(self):
+        """
+        :rtype: str
+        """
         return self.info.get('height')
 
     def get_info(self):
@@ -332,7 +421,8 @@ class SoundCloudBackend(VideoBackend):
             'format': 'json',
             'url': self._url,
         }
-        r = requests.get(self.base_url, params=params,
+        r = requests.get(self.base_url.format(protocol=self.protocol),
+                         params=params,
                          timeout=EMBED_VIDEO_TIMEOUT)
 
         if r.status_code != 200:

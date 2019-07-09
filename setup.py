@@ -17,11 +17,12 @@ setup(
     packages=find_packages(),
     package_data={'embed_video': ['templates/embed_video/*.html']},
     version=embed_video.get_version(),
-    author='Juda Kaleta',
-    author_email='juda.kaleta@gmail.com',
-    url='https://github.com/yetty/django-embed-video',
+    author='Cedric Carrard',
+    author_email='cedric.carrard@gmail.com',
+    url='https://github.com/jazzband/django-embed-video',
     description=embed_video.__doc__.strip(),
     long_description='\n\n'.join([README, CHANGES]),
+    long_description_content_type='text/x-rst',
     classifiers=[
         'Framework :: Django',
         'License :: OSI Approved :: MIT License',
@@ -32,5 +33,7 @@ setup(
     ],
     keywords=['youtube', 'vimeo', 'video', 'soundcloud'],
     install_requires=['requests >= 1.2.3', 'Django >= 1.5'],
+    setup_requires=['nose', 'readme'],
+    tests_require=['Django', 'requests >= 2.19', 'mock', 'testfixtures', 'south', 'coverage'],
     test_suite='nose.collector',
 )

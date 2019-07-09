@@ -1,9 +1,15 @@
 from unittest import TestCase, skip
 from mock import Mock, patch
+import sys
 import re
 
+if sys.version_info.major == 3:
+    import urllib.parse as urlparse
+else:
+    import urlparse
+
 from django.template import TemplateSyntaxError
-from django.http import HttpRequest
+from django.http import HttpRequest, QueryDict
 from django.template.base import Template
 from django.template.context import RequestContext
 from django.test.client import RequestFactory
@@ -15,10 +21,38 @@ URL_PATTERN = re.compile(r'src="?\'?([^"\'>]*)"')
 
 
 class EmbedTestCase(TestCase):
-    def assertRenderedTemplate(self, template_string, output, context=None):
+    def render_template(self, template_string, context=None):
         response = RequestContext(HttpRequest(), context)
-        rendered_output = Template(template_string).render(response)
-        self.assertEqual(rendered_output.strip(), output.strip())
+        return Template(template_string).render(response).strip()
+
+    def assertRenderedTemplate(self, template_string, output, context=None):
+        rendered_output = self.render_template(template_string, context=context)
+        self.assertEqual(rendered_output, output.strip())
+
+    def url_dict(self, url):
+        """
+        Parse the URL into a format suitable for comparison, ignoring the query
+        parameter order.
+        """
+
+        parsed = urlparse.urlparse(url)
+        query = urlparse.parse_qs(parsed.query)
+
+        return {
+            'scheme': parsed.scheme,
+            'netloc': parsed.netloc,
+            'path': parsed.path,
+            'params': parsed.params,
+            'query': query,
+            'fragment': parsed.fragment,
+        }
+
+    def assertUrlEqual(self, actual, expected, msg=None):
+        """Assert two URLs are equal, ignoring the query parameter order."""
+        actual_dict = self.url_dict(actual)
+        expected_dict = self.url_dict(expected)
+
+        self.assertEqual(actual_dict, expected_dict, msg=msg)
 
     def test_embed(self):
         template = """
@@ -30,7 +64,7 @@ class EmbedTestCase(TestCase):
         self.assertRenderedTemplate(
             template,
             '<iframe width="960" height="720" '
-            'src="http://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
+            'src="https://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
             'frameborder="0" allowfullscreen></iframe>'
         )
 
@@ -66,7 +100,7 @@ class EmbedTestCase(TestCase):
         self.assertRenderedTemplate(
             template,
             '<iframe width="960" height="720" '
-            'src="http://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
+            'src="https://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
             'frameborder="0" allowfullscreen></iframe>'
         )
 
@@ -78,7 +112,7 @@ class EmbedTestCase(TestCase):
         self.assertRenderedTemplate(
             template,
             '<iframe width="480" height="360" '
-            'src="http://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
+            'src="https://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
             'frameborder="0" allowfullscreen></iframe>'
         )
 
@@ -99,7 +133,7 @@ class EmbedTestCase(TestCase):
         self.assertRenderedTemplate(
             template,
             '<iframe width="800" height="800" '
-            'src="http://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
+            'src="https://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
             'frameborder="0" allowfullscreen></iframe>'
         )
 
@@ -120,7 +154,7 @@ class EmbedTestCase(TestCase):
         """
         self.assertRenderedTemplate(
             template,
-            'http://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque '
+            'https://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque '
             'YoutubeBackend'
         )
 
@@ -132,7 +166,7 @@ class EmbedTestCase(TestCase):
             {% endvideo %}
         """
         self.assertRenderedTemplate(
-            template, 'http://player.vimeo.com/video/72304002 VimeoBackend 176'
+            template, 'https://player.vimeo.com/video/72304002 VimeoBackend 176'
         )
 
     def test_tag_soundcloud(self):
@@ -144,7 +178,7 @@ class EmbedTestCase(TestCase):
         """
         self.assertRenderedTemplate(
             template,
-            'https://w.soundcloud.com/player/?visual=true&amp;url=http%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F82244706&amp;show_artwork=true '
+            'https://w.soundcloud.com/player/?visual=true&amp;url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F82244706&amp;show_artwork=true '
             'SoundCloudBackend'
         )
 
@@ -160,7 +194,7 @@ class EmbedTestCase(TestCase):
 
         self.assertRenderedTemplate(template, '')
         logs.check(
-            ('requests.packages.urllib3.connectionpool', 'INFO', 'Starting new HTTP connection (1): vimeo.com'),
+            ('urllib3.connectionpool', 'DEBUG', 'Starting new HTTPS connection (1): vimeo.com:443'),
             ('embed_video.templatetags.embed_video_tags', 'ERROR', 'Timeout reached during rendering embed video (`http://vimeo.com/72304002`)')
         )
 
@@ -172,7 +206,7 @@ class EmbedTestCase(TestCase):
         self.assertRenderedTemplate(
             template,
             '<iframe width="80%" height="30%" '
-            'src="http://player.vimeo.com/video/72304002" '
+            'src="https://player.vimeo.com/video/72304002" '
             'frameborder="0" allowfullscreen></iframe>'
         )
 
@@ -184,7 +218,7 @@ class EmbedTestCase(TestCase):
         self.assertRenderedTemplate(
             template,
             '<iframe width="80%" height="300" '
-            'src="http://player.vimeo.com/video/72304002" '
+            'src="https://player.vimeo.com/video/72304002" '
             'frameborder="0" allowfullscreen></iframe>'
         )
 
@@ -195,9 +229,11 @@ class EmbedTestCase(TestCase):
                {{ ytb.url }}
            {% endvideo %}
         """
-        self.assertRenderedTemplate(
-            template,
-            'http://www.youtube.com/embed/jsrRJyHBvzw?wmode=transparent&rel=1'
+
+        output = self.render_template(template)
+        self.assertUrlEqual(
+            output,
+            'https://www.youtube.com/embed/jsrRJyHBvzw?rel=1&wmode=transparent'
         )
 
     def test_direct_embed_with_query(self):
@@ -206,10 +242,25 @@ class EmbedTestCase(TestCase):
            {% video 'http://www.youtube.com/watch?v=jsrRJyHBvzw' query="rel=1&wmode=transparent" %}
         """
 
-        self.assertRenderedTemplate(
-            template,
+        output = self.render_template(template)
+
+        # The order of query parameters in the URL might change between Python
+        # versions. Compare the URL and the outer part separately.
+
+        url_pattern = re.compile(r'http[^"]+')
+        url = url_pattern.search(output).group(0)
+
+        self.assertUrlEqual(
+            url,
+            'https://www.youtube.com/embed/jsrRJyHBvzw?rel=1&wmode=transparent'
+        )
+
+        output_without_url = url_pattern.sub('URL', output)
+
+        self.assertEqual(
+            output_without_url,
             '<iframe width="480" height="360" '
-            'src="http://www.youtube.com/embed/jsrRJyHBvzw?wmode=transparent&rel=1" '
+            'src="URL" '
             'frameborder="0" allowfullscreen></iframe>'
         )
 
@@ -235,7 +286,7 @@ class EmbedTestCase(TestCase):
         self.assertRenderedTemplate(
             template,
             '<iframe width="500" height="200" '
-            'src="http://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
+            'src="https://www.youtube.com/embed/jsrRJyHBvzw?wmode=opaque" '
             'frameborder="0" allowfullscreen></iframe>'
         )
 
@@ -281,4 +332,3 @@ class EmbedVideoNodeTestCase(TestCase):
         context = {'request': InsecureRequest()}
         backend = VideoNode.get_backend('http://www.youtube.com/watch?v=jsrRJyHBvzw', context)
         self.assertFalse(backend.is_secure)
-
