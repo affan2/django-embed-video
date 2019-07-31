@@ -50,10 +50,10 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'django-embed-video'
-copyright = u'2018, Jazzband'
+project = 'django-embed-video'
+copyright = '2018, Jazzband'
 
-# The version info for the project you're documenting, acts as replacement for
+# The version info for the project yo're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
@@ -206,8 +206,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'django-embed-video.tex', u'django-embed-video Documentation',
-   u'Juda Kaleta', 'manual'),
+  ('index', 'django-embed-video.tex', 'django-embed-video Documentation',
+   'Juda Kaleta', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -236,8 +236,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'django-embed-video', u'django-embed-video Documentation',
-     [u'Juda Kaleta'], 1)
+    ('index', 'django-embed-video', 'django-embed-video Documentation',
+     ['Juda Kaleta'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -250,8 +250,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'django-embed-video', u'django-embed-video Documentation',
-   u'Juda Kaleta', 'django-embed-video', 'One line description of project.',
+  ('index', 'django-embed-video', 'django-embed-video Documentation',
+   'Juda Kaleta', 'django-embed-video', 'One line description of project.',
    'Miscellaneous'),
 ]
 

@@ -48,7 +48,7 @@ class EmbedVideoFormFieldTestCase(TestCase):
                               ('http://youtube.com/v/123/',))
 
     def test_validation_correct(self):
-        url = 'http://www.youtube.com/watch?v=gauN0gzxTcU'
+        url = 'http://www.youtube.com/watch?v=gauN0gzxTc'
         with patch('embed_video.fields.detect_backend') as mock_detect_backend:
             mock_detect_backend.return_value = YoutubeBackend(url)
             self.assertEqual(url, self.formfield.validate(url))
