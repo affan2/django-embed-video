@@ -12,6 +12,7 @@ from django.http import QueryDict
 from django.template.loader import render_to_string
 from django.utils.functional import cached_property
 from django.utils.safestring import mark_safe
+from abc import ABC
 
 from .utils import import_by_path
 from .settings import EMBED_VIDEO_BACKENDS, EMBED_VIDEO_TIMEOUT, \
@@ -280,7 +281,7 @@ class VideoBackend(object):
             setattr(self, key, options[key])
 
 
-class YoutubeBackend(VideoBackend):
+class YoutubeBackend(VideoBackend, ABC):
     """
     Backend for YouTube URLs.
     """
@@ -318,7 +319,6 @@ class YoutubeBackend(VideoBackend):
 
     :type: bool
     """
-
 
     def get_code(self):
         code = super(YoutubeBackend, self).get_code()
@@ -368,7 +368,6 @@ class VimeoBackend(VideoBackend):
 
     :type: bool
     """
-
 
     def get_info(self):
         try:
